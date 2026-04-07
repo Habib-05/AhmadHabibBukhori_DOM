@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Aktivitas Harian</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f9;
+        display: flex;
+        justify-content: center;
+        align-items: start;
+        height: 100vh;
+        margin: 0;
+        padding-top: 40px;
+      }
+
+      .container {
+        display: flex;
+        gap: 20px;
+      }
+
+      /* CARD */
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 300px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .card h2 {
+        margin-top: 0;
+      }
+
+      /* INPUT */
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+      }
+
+      input[type="time"] {
+        width: 100%;
+      }
+
+      /* BUTTON */
+      button {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: #4caf50;
+        color: white;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      /* LIST */
+      ol {
+        padding-left: 20px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
+      /* BUTTON HAPUS */
+      li button {
+        margin-left: 10px;
+        background: #e74c3c;
+      }
+
+      li button:hover {
+        background: #c0392b;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="card">
+        <h2>Tambah Aktivitas</h2>
+        <input type="text" id="activity" placeholder="aktivitas: belajar" />
+        <input type="time" id="time" />
+        <input type="number" id="duration" placeholder="durasi (menit)" />
+        <button id="addBtn">Tambah</button>
+      </div>
+
+      <div class="card">
+        <h2>Aktivitas Harian Saya</h2>
+        <p id="total">Total: 0 menit (0 aktivitas)</p>
+        <ol id="list"></ol>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "activities";
+
+      function getActivities() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+      }
+
+      function saveActivities(activities) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+      }
+
+      const activityInput = document.getElementById("activity");
+      const timeInput = document.getElementById("time");
+      const durationInput = document.getElementById("duration");
+      const addBtn = document.getElementById("addBtn");
+      const list = document.getElementById("list");
+      const totalText = document.getElementById("total");
+
+      function renderList(activities) {
+        list.innerHTML = "";
+
+        activities.forEach((item, index) => {
+          const li = document.createElement("li");
+
+          li.textContent = `${item.name} (${item.time}) - ${item.duration} menit `;
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.textContent = "Hapus";
+
+          deleteBtn.addEventListener("click", function () {
+            activities.splice(index, 1);
+            saveActivities(activities);
+            renderList(activities);
+            renderTotal(activities);
+          });
+
+          li.appendChild(deleteBtn);
+          list.appendChild(li);
+        });
+      }
+
+      function renderTotal(activities) {
+        const total = activities.reduce((sum, item) => sum + item.duration, 0);
+        totalText.textContent = `Total: ${total} menit (${activities.length} aktivitas)`;
+      }
+
+      let activities = getActivities();
+
+      // render awal
+      renderList(activities);
+      renderTotal(activities);
+
+      // tambah aktivitas
+      addBtn.addEventListener("click", function () {
+        const name = activityInput.value;
+        const time = timeInput.value;
+        const duration = parseInt(durationInput.value);
+
+        if (!name || !time || !duration || duration <= 0) return;
+
+        const newActivity = { name, time, duration };
+
+        activities.push(newActivity);
+        saveActivities(activities);
+
+        renderList(activities);
+        renderTotal(activities);
+
+        activityInput.value = "";
+        timeInput.value = "";
+        durationInput.value = "";
+      });
+    </script>
+  </body>
+</html>
