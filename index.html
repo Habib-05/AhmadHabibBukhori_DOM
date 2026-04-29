@@ -1,176 +1,100 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>Aktivitas Harian</title>
+<head>
+  <meta charset="utf-8">
+  <title>Student Productivity Analyzer</title>
+  <style>
+    body { font-family: Arial; margin: 24px; max-width: 700px; }
+    input, button { padding: 8px; margin: 4px; }
+    #list, #result {
+      border: 1px solid #ddd; padding: 10px; margin-top: 10px; white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
 
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f9;
-        display: flex;
-        justify-content: center;
-        align-items: start;
-        height: 100vh;
-        margin: 0;
-        padding-top: 40px;
-      }
+<h2>Student Productivity Analyzer</h2>
+<p>Masukkan aktivitas harian untuk dianalisis oleh AI.</p>
 
-      .container {
-        display: flex;
-        gap: 20px;
-      }
+<input id="act" placeholder="contoh: belajar, game">
+<input id="min" type="number" placeholder="menit">
 
-      /* CARD */
-      .card {
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        width: 300px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      }
+<button onclick="tambah()">Tambah</button>
+<button onclick="analisis()">Analisis AI</button>
 
-      .card h2 {
-        margin-top: 0;
-      }
+<p id="total">Total: 0 menit</p>
 
-      /* INPUT */
-      input {
-        width: 100%;
-        padding: 8px;
-        margin-bottom: 10px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-      }
+<h3>Aktivitas:</h3>
+<div id="list">Belum ada data</div>
 
-      input[type="time"] {
-        width: 100%;
-      }
+<h3>Analisis AI:</h3>
+<div id="result">Belum dianalisis</div>
 
-      /* BUTTON */
-      button {
-        padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        background: #4caf50;
-        color: white;
-        cursor: pointer;
-      }
+<script>
+let data = [];
 
-      button:hover {
-        background: #45a049;
-      }
+function render() {
+  let total = 0;
+  let text = "";
 
-      /* LIST */
-      ol {
-        padding-left: 20px;
-      }
+  data.forEach((d, i) => {
+    total += d.m;
+    text += (i+1) + ". " + d.a + " - " + d.m + " menit\n";
+  });
 
-      li {
-        margin-bottom: 8px;
-      }
+  document.getElementById("total").innerText =
+    "Total: " + total + " menit";
 
-      /* BUTTON HAPUS */
-      li button {
-        margin-left: 10px;
-        background: #e74c3c;
-      }
+  document.getElementById("list").innerText =
+    text || "Belum ada data";
+}
 
-      li button:hover {
-        background: #c0392b;
-      }
-    </style>
-  </head>
+function tambah() {
+  const a = document.getElementById("act").value;
+  const m = Number(document.getElementById("min").value);
 
-  <body>
-    <div class="container">
-      <div class="card">
-        <h2>Tambah Aktivitas</h2>
-        <input type="text" id="activity" placeholder="aktivitas: belajar" />
-        <input type="time" id="time" />
-        <input type="number" id="duration" placeholder="durasi (menit)" />
-        <button id="addBtn">Tambah</button>
-      </div>
+  if (!a || !m) return alert("Isi data dengan benar");
 
-      <div class="card">
-        <h2>Aktivitas Harian Saya</h2>
-        <p id="total">Total: 0 menit (0 aktivitas)</p>
-        <ol id="list"></ol>
-      </div>
-    </div>
+  data.push({ a, m });
 
-    <script>
-      const STORAGE_KEY = "activities";
+  document.getElementById("act").value = "";
+  document.getElementById("min").value = "";
 
-      function getActivities() {
-        const data = localStorage.getItem(STORAGE_KEY);
-        return data ? JSON.parse(data) : [];
-      }
+  render();
+}
 
-      function saveActivities(activities) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
-      }
+async function analisis() {
+  if (data.length === 0) return;
 
-      const activityInput = document.getElementById("activity");
-      const timeInput = document.getElementById("time");
-      const durationInput = document.getElementById("duration");
-      const addBtn = document.getElementById("addBtn");
-      const list = document.getElementById("list");
-      const totalText = document.getElementById("total");
+  document.getElementById("result").innerText = "Menganalisis...";
 
-      function renderList(activities) {
-        list.innerHTML = "";
+  const daftar = data.map((d, i) =>
+    (i+1) + ". " + d.a + " - " + d.m + " menit"
+  ).join("\n");
 
-        activities.forEach((item, index) => {
-          const li = document.createElement("li");
+  try {
+    const res = await fetch("https://activity-ai-backend.vercel.app/api/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        activities: daftar
+      })
+    });
 
-          li.textContent = `${item.name} (${item.time}) - ${item.duration} menit `;
+    const json = await res.json();
 
-          const deleteBtn = document.createElement("button");
-          deleteBtn.textContent = "Hapus";
+    document.getElementById("result").innerText =
+      json.result || json.error;
 
-          deleteBtn.addEventListener("click", function () {
-            activities.splice(index, 1);
-            saveActivities(activities);
-            renderList(activities);
-            renderTotal(activities);
-          });
+  } catch {
+    document.getElementById("result").innerText = "Gagal koneksi ke AI";
+  }
+}
 
-          li.appendChild(deleteBtn);
-          list.appendChild(li);
-        });
-      }
+render();
+</script>
 
-      function renderTotal(activities) {
-        const total = activities.reduce((sum, item) => sum + item.duration, 0);
-        totalText.textContent = `Total: ${total} menit (${activities.length} aktivitas)`;
-      }
-
-      let activities = getActivities();
-
-      // render awal
-      renderList(activities);
-      renderTotal(activities);
-
-      // tambah aktivitas
-      addBtn.addEventListener("click", function () {
-        const name = activityInput.value;
-        const time = timeInput.value;
-        const duration = parseInt(durationInput.value);
-
-        if (!name || !time || !duration || duration <= 0) return;
-
-        const newActivity = { name, time, duration };
-
-        activities.push(newActivity);
-        saveActivities(activities);
-
-        renderList(activities);
-        renderTotal(activities);
-
-        activityInput.value = "";
-        timeInput.value = "";
-        durationInput.value = "";
-      });
-    </script>
-  </body>
+</body>
 </html>
